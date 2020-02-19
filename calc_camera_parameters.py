@@ -161,6 +161,7 @@ def main():
         ray_x = []
         ray_y = []
         ray_z = []
+        print('~~~~~ ' + name)
         for i in range(num_iterations):
             pos, ray = calc_pos(fovy, bbox_min, bbox_max, num_iterations, i, name)
             pos_x.append(pos[0])
@@ -169,6 +170,8 @@ def main():
             ray_x.append(ray[0])
             ray_y.append(ray[1])
             ray_z.append(ray[2])
+            print('pos: ' + str(pos))
+            print('dir: ' + str(ray))
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
