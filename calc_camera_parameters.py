@@ -199,14 +199,55 @@ def pathpatch_2d_to_3d(pathpatch, z, normal):
 
     pathpatch._segment3d = np.array([np.dot(M, (x, y, 0)) + (0, 0, z) for x, y in verts])
 
+
 def pathpatch_translate(pathpatch, delta):
     pathpatch._segment3d += delta
+
 
 def plot_plane(ax, point, normal, size=10, color='y'):    
     p = Circle((0, 0), size, facecolor = color, alpha = .2)
     ax.add_patch(p)
     pathpatch_2d_to_3d(p, z=0, normal=normal)
     pathpatch_translate(p, (point[0], point[1], point[2]))
+
+
+def project_2d(coords, normal):
+    # point on plane
+    point = coords[len(coords)/2]
+    # find d via plane equation
+    d = -normal[0]*point[0] - normal[1]*point[1] - normal[2]*point[2]
+    # calculate projected coords (perpendicular onto the plane) 
+    coords_proj = []
+    for p in coords:
+        # perpendicular distance of points to plane
+        dist = normal.dot(p) + d
+        coords_proj.append(p - dist*normal)
+
+    # change of basis to 2d
+    # the plane normal is our Z
+    # we need at least 3 points
+    assert(len(coords_proj) >= 3)
+    u = coords_proj[1] - coords_proj[0]
+    X = u - u.dot(normal)*normal
+    Y = np.cross(normal, X)
+
+    # transform all points to 2d coord system
+    coords_trans = []
+    coords_trans_x = []
+    coords_trans_y = []
+    for p in coords_proj:
+        coords_trans.append(np.array(p.dot(X), p.dot(Y)))
+        coords_trans_x.append(p.dot(X))
+        coords_trans_y.append(p.dot(Y))
+    print('coords transformed to 2d: ' + str(coords_trans))
+
+    ### plot 2d projection
+    fig = plt.figure()
+    plt.scatter(coords_trans_x, coords_trans_y)
+    plt.show()
+
+    return coords_trans
+
 
 '''
 driver code
@@ -245,15 +286,13 @@ def main():
             pos_y.append(pos[1])
             pos_z.append(pos[2])
             coords.append(pos)
-            # np.append([coords], [pos], axis=0)
 
             ray_x.append(ray[0])
             ray_y.append(ray[1])
             ray_z.append(ray[2])
             rays.append(ray)
-
-            print('pos: ' + str(pos))
-            print('dir: ' + str(ray))
+            # print('pos: ' + str(pos))
+            # print('dir: ' + str(ray))
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
@@ -276,9 +315,16 @@ def main():
         normal = get_plane(np.array(coords))
         print('normal: ' + str(normal))
         point = coords[len(coords)/2]
+
+        # plot the plane
         plot_plane(ax, point, normal, size=4) 
 
+        ### 3d plot including bounding box and plane
         plt.title(name)
         plt.show()
+
+        coords_trans = project_2d(coords, normal)
+
+        # TODO: project directional vectors
 
 main()
