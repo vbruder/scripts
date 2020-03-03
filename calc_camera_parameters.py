@@ -213,7 +213,7 @@ def plot_plane(ax, point, normal, size=10, color='y'):
 
 def project_2d(coords, normal):
     # point on plane
-    point = coords[len(coords)/2]
+    point = coords[int(len(coords)/2)]
     # find d via plane equation
     d = -normal[0]*point[0] - normal[1]*point[1] - normal[2]*point[2]
     # calculate projected coords (perpendicular onto the plane) 
@@ -243,26 +243,35 @@ def project_2d(coords, normal):
 
     ### plot 2d projection
     fig = plt.figure()
-    plt.scatter(coords_trans_x, coords_trans_y)
+    plt.plot(coords_trans_x, coords_trans_y, '-o')
     plt.show()
 
     return coords_trans
 
+'''
+draw unit cube 
+TODO: adapt to actual bounding box 
+'''
+def draw_cube(ax):
+    r = [-1, 1]
+    for s, e in combinations(np.array(list(product(r,r,r))), 2):
+        if np.sum(np.abs(s-e)) == r[1]-r[0]:
+            ax.plot3D(*zip(s, e), color="red")
+
 
 '''
-driver code
+Calculate and plot positions for the camera paths used during the TRRojan measurements.
 '''
-def main():
+def trrojan_paths(num_iterations):
     fovy = 60   # always 60 degrees for the point data benchmark
-    bbox_min = np.array([-1, -1, -1])   # depends on the data set
-    bbox_max = np.array([ 1,  1,  1])   # depends on the data set
+    bbox_min = np.array([-1, -1, -1])   # TODO: depends on the data set
+    bbox_max = np.array([ 1,  1,  1])   # TODO: depends on the data set
     camera_path_names = ["diagonal_x", "diagonal_y", "diagonal_z", 
                          "orbit_x", "orbit_y", 
                          "path_x", "path_y", "path_z", 
                          "path_sin_x", "path_sin_y", "path_sin_z"
                         ]
 
-    num_iterations = 12
     # read number of iterations from console
     if len(sys.argv) > 1:
         num_iterations = int(sys.argv[1])
@@ -304,27 +313,113 @@ def main():
         ax.set_ylim([-2, 2])
         ax.set_zlim([-2, 2])
 
-        # draw unit cube 
-        # TODO: adapt to actual bounding box 
-        r = [-1, 1]
-        for s, e in combinations(np.array(list(product(r,r,r))), 2):
-            if np.sum(np.abs(s-e)) == r[1]-r[0]:
-                ax.plot3D(*zip(s, e), color="red")
-
         # calculate projection plane
         normal = get_plane(np.array(coords))
         print('normal: ' + str(normal))
-        point = coords[len(coords)/2]
+        # point on plane
+        point = coords[int(len(coords)/2)]
 
+        ## plot 3d points
         # plot the plane
         plot_plane(ax, point, normal, size=4) 
-
-        ### 3d plot including bounding box and plane
+        # plot bounding box (unit cube)
+        draw_cube(ax)
         plt.title(name)
         plt.show()
 
+        # project points to 2d and plot in 2d
         coords_trans = project_2d(coords, normal)
 
         # TODO: project directional vectors
+
+
+'''
+driver code
+'''
+def main():
+    if len(sys.argv) == 0:
+        trrojan_paths(12)
+    if len(sys.argv) == 1:
+        trrojan_paths(int(sys.argv[1]))
+    elif len(sys.argv) != 4:
+        print("Number arguments must be either 0, 1 or 3:")
+        print("# camera iterations (1), rotations file name (2), translation file name (3)")
+        return 
+
+    ### recorded camera path
+    stride = int(sys.argv[1])   # sampling distance between recorded points
+    file_rotations = ""
+    file_translations = ""
+
+    # read file name of rotations
+    if len(sys.argv) > 2:
+        rot_file_name = str(sys.argv[2])
+    file_rot = open(rot_file_name, 'r')
+    rot = []
+    for l in file_rot:
+        for s in l.split(';'):
+            vals = s.split(' ')
+            if len(vals) == 5:
+                vals.pop(0)
+            if len(vals) != 4:
+                break
+            q = Quaternion(vals[0], vals[1], vals[2], vals[3])
+            rot.append(q)
+    file_rot.close()
+
+    # read file name of translations
+    if len(sys.argv) > 3:
+        trans_file_name = str(sys.argv[3])
+    file_trans = open(trans_file_name, 'r')
+    trans = []
+    for l in file_trans:
+        for s in l.split(';'):
+            vals = s.split(' ')
+            if len(vals) == 4:
+                vals.pop(0)
+            if len(vals) != 3:
+                break
+            t = np.array([float(vals[0]), float(vals[1]), float(vals[2])])
+            trans.append(t)
+    file_trans.close()
+
+    pos_x = []
+    pos_y = []
+    pos_z = []
+    coords = []
+    # calculate every n-th position
+    for i,t in enumerate(trans):
+        if i % stride != 0:
+            continue
+        q = rot[i]
+        pos = q.rotate(t)
+        coords.append(pos)
+        pos_x.append(pos[0])
+        pos_y.append(pos[1])
+        pos_z.append(pos[2])
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    # plot camera positions
+    ax.plot(pos_x, pos_y, pos_z, '-o')
+
+    # calculate projection plane
+    # TODO: validate plane, this does not look correct for the custom cam.
+    normal = get_plane(np.array(coords))
+    print('normal: ' + str(normal))
+    # point on plane
+    point = coords[int(len(coords)/2)]
+
+    ## plot 3d points
+    # plot the plane
+    plot_plane(ax, point, normal, size=4) 
+    # plot bounding box (unit cube)
+    draw_cube(ax)
+
+    plt.title("Custom camera path")
+    plt.show()
+    
+    # project points to 2d and plot in 2d
+    coords_trans = project_2d(coords, normal)
 
 main()
