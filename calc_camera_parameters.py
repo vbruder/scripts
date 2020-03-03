@@ -53,6 +53,7 @@ def calc_pos_orbit(fovy, bbox_min, bbox_max, num_iterations, step, name):
     data_center = bbox_min + 0.5 * (bbox_max - bbox_min)
     cam_pos = rotate_fixed_to(q, data_center, cam_initial_pos)
     ray = (bbox_min + (bbox_max - bbox_min)*0.5) - cam_pos
+    ray /= np.linalg.norm(ray)
 
     return cam_pos, ray
 
@@ -73,7 +74,8 @@ def calc_pos_diagonal(fovy, bbox_min, bbox_max, num_iterations, step, name):
     camera_dist = (diagonal_length * 0.5) / math.tan(fovy * 0.5 * math.pi / 180.)
     camera_dist *= (1. - step / float(num_iterations))
     cam_pos = bbox_min + (bbox_max - bbox_min)*0.5 + (begin - end)/diagonal_length * camera_dist
-    ray = end
+    ray = end - cam_pos
+    ray /= np.linalg.norm(ray)
 
     return cam_pos, ray
 
@@ -122,6 +124,7 @@ def calc_pos_path(fovy, bbox_min, bbox_max, num_iterations, step, name):
         da /= max(curve)
         q = Quaternion(axis=up, angle=da)
         ray = ((q * np.concatenate([[0], ray])) * q.conjugate).vector
+        ray /= np.linalg.norm(ray)
     # TODO: add cos 
     else:
         cam_pos += (step_size*dist) * ray
@@ -211,17 +214,23 @@ def plot_plane(ax, point, normal, size=10, color='y'):
     pathpatch_translate(p, (point[0], point[1], point[2]))
 
 
-def project_2d(coords, normal):
-    # point on plane
+def project_2d(coords, normal, rays):
+    # some point on the plane
     point = coords[int(len(coords)/2)]
     # find d via plane equation
     d = -normal[0]*point[0] - normal[1]*point[1] - normal[2]*point[2]
+
     # calculate projected coords (perpendicular onto the plane) 
     coords_proj = []
-    for p in coords:
-        # perpendicular distance of points to plane
+    rays_proj = []
+    for p, r in zip(coords, rays):
+        # project point using perpendicular distance to plane
         dist = normal.dot(p) + d
         coords_proj.append(p - dist*normal)
+        # project ray end point
+        dist_ray = normal.dot(r - p) + d
+        # ray goes from coords_proj towards rays_proj
+        rays_proj.append((r - p) - dist_ray*normal)
 
     # change of basis to 2d
     # the plane normal is our Z
@@ -233,20 +242,29 @@ def project_2d(coords, normal):
 
     # transform all points to 2d coord system
     coords_trans = []
+    rays_trans = []
     coords_trans_x = []
     coords_trans_y = []
-    for p in coords_proj:
+    rays_trans_x = []
+    rays_trans_y =[]
+
+    for p, r in zip(coords_proj, rays_proj):
         coords_trans.append(np.array(p.dot(X), p.dot(Y)))
         coords_trans_x.append(p.dot(X))
         coords_trans_y.append(p.dot(Y))
+        rays_trans.append(np.array(r.dot(X), r.dot(Y)))
+        rays_trans_x.append(r.dot(X))
+        rays_trans_y.append(r.dot(Y))
+
     print('coords transformed to 2d: ' + str(coords_trans))
 
     ### plot 2d projection
     fig = plt.figure()
     plt.plot(coords_trans_x, coords_trans_y, '-o')
+    plt.quiver(coords_trans_x, coords_trans_y, rays_trans_x, rays_trans_y, color=[0,0.7,0,0.4])
     plt.show()
 
-    return coords_trans
+    return coords_trans, rays_trans
 
 '''
 draw unit cube 
@@ -328,7 +346,7 @@ def trrojan_paths(num_iterations):
         plt.show()
 
         # project points to 2d and plot in 2d
-        coords_trans = project_2d(coords, normal)
+        coords_trans, rays_trans = project_2d(coords, normal, rays)
 
         # TODO: project directional vectors
 
@@ -337,9 +355,9 @@ def trrojan_paths(num_iterations):
 driver code
 '''
 def main():
-    if len(sys.argv) == 0:
-        trrojan_paths(12)
     if len(sys.argv) == 1:
+        trrojan_paths(12)
+    if len(sys.argv) == 2:
         trrojan_paths(int(sys.argv[1]))
     elif len(sys.argv) != 4:
         print("Number arguments must be either 0, 1 or 3:")
@@ -348,8 +366,8 @@ def main():
 
     ### recorded camera path
     stride = int(sys.argv[1])   # sampling distance between recorded points
-    file_rotations = ""
-    file_translations = ""
+    rot_file_name = ""
+    trans_file_name = ""
 
     # read file name of rotations
     if len(sys.argv) > 2:
@@ -387,6 +405,7 @@ def main():
     pos_y = []
     pos_z = []
     coords = []
+    rays = []
     # calculate every n-th position
     for i,t in enumerate(trans):
         if i % stride != 0:
@@ -397,6 +416,8 @@ def main():
         pos_x.append(pos[0])
         pos_y.append(pos[1])
         pos_z.append(pos[2])
+        # TODO: cam is always facing the center in the custom path for now
+        rays.append(-pos / np.linalg.norm(-pos))
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -420,6 +441,6 @@ def main():
     plt.show()
     
     # project points to 2d and plot in 2d
-    coords_trans = project_2d(coords, normal)
+    coords_trans, rays_trans = project_2d(coords, normal, rays)
 
 main()
