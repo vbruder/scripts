@@ -9,6 +9,8 @@ Copyright (c) 2020 Visualization Research Institute University of Stuttgart
 import sys
 import math
 import numpy as np
+import pandas as pd
+import pathlib
 from pyquaternion import Quaternion
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -249,10 +251,10 @@ def project_2d(coords, normal, rays):
     rays_trans_y =[]
 
     for p, r in zip(coords_proj, rays_proj):
-        coords_trans.append(np.array(p.dot(X), p.dot(Y)))
+        coords_trans.append(np.array([p.dot(X), p.dot(Y)]))
         coords_trans_x.append(p.dot(X))
         coords_trans_y.append(p.dot(Y))
-        rays_trans.append(np.array(r.dot(X), r.dot(Y)))
+        rays_trans.append(np.array([r.dot(X), r.dot(Y)]))
         rays_trans_x.append(r.dot(X))
         rays_trans_y.append(r.dot(Y))
 
@@ -289,10 +291,6 @@ def trrojan_paths(num_iterations):
                          "path_x", "path_y", "path_z", 
                          "path_sin_x", "path_sin_y", "path_sin_z"
                         ]
-
-    # read number of iterations from console
-    if len(sys.argv) > 1:
-        num_iterations = int(sys.argv[1])
 
     for name in camera_path_names:
         pos_x = []
@@ -347,16 +345,45 @@ def trrojan_paths(num_iterations):
 
         # project points to 2d and plot in 2d
         coords_trans, rays_trans = project_2d(coords, normal, rays)
+        write2csv(coords_trans, rays_trans, 11, 10, name)
 
-        # TODO: project directional vectors
+'''
+'''
+def write2csv(coords, rays, cam_step_count, cam_step_stride, name):
+    coords_trans_x = []
+    coords_trans_y = []
+    rays_trans_x = []
+    rays_trans_y = []
+    for c,r in zip(coords, rays):
+        coords_trans_x.append(c[0])
+        coords_trans_y.append(c[1])
+        rays_trans_x.append(r[0])
+        rays_trans_y.append(r[1])    
 
+    cam_steps = [0, 9, 19, 29, 39, 49, 59, 69, 79, 89, 99]
+    if len(cam_steps) != len(coords):
+        cam_steps = []
+        for i in range(0, cam_step_count, cam_step_stride):
+            cam_steps.append(i)
+
+    df = pd.DataFrame()
+    df["pos_x"] = coords_trans_x
+    df["pos_y"] = coords_trans_y
+    df["view_x"] = rays_trans_x
+    df["view_y"] = rays_trans_y    
+    df["camera_step"] = cam_steps
+    df.set_index("camera_step", inplace=True)
+    export_dir = pathlib.Path("camera_prototype", "public", name)
+    pathlib.Path(export_dir).mkdir(parents=True)
+    df.to_csv(pathlib.Path(export_dir, "points.csv"))
+    print(df)
 
 '''
 driver code
 '''
 def main():
     if len(sys.argv) == 1:
-        trrojan_paths(12)
+        trrojan_paths(11)
     if len(sys.argv) == 2:
         trrojan_paths(int(sys.argv[1]))
     elif len(sys.argv) != 4:
@@ -442,5 +469,6 @@ def main():
     
     # project points to 2d and plot in 2d
     coords_trans, rays_trans = project_2d(coords, normal, rays)
+    write2csv(coords_trans, rays_trans, len(trans), stride, "custom")
 
 main()
