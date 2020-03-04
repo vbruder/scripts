@@ -251,12 +251,12 @@ def project_2d(coords, normal, rays):
     rays_trans_y =[]
 
     for p, r in zip(coords_proj, rays_proj):
-        coords_trans.append(np.array([p.dot(X), p.dot(Y)]))
-        coords_trans_x.append(p.dot(X))
-        coords_trans_y.append(p.dot(Y))
-        rays_trans.append(np.array([r.dot(X), r.dot(Y)]))
-        rays_trans_x.append(r.dot(X))
-        rays_trans_y.append(r.dot(Y))
+        coords_trans_x.append(round(p.dot(X), 6))
+        coords_trans_y.append(round(p.dot(Y), 6))
+        coords_trans.append(np.array([coords_trans_x[-1], coords_trans_y[-1]]))
+        rays_trans_x.append(round(r.dot(X), 6))
+        rays_trans_y.append(round(r.dot(Y), 6))
+        rays_trans.append(np.array([rays_trans_x[-1], rays_trans_y[-1]]))
 
     print('coords transformed to 2d: ' + str(coords_trans))
 
@@ -374,7 +374,7 @@ def write2csv(coords, rays, cam_step_count, cam_step_stride, name):
     df["camera_step"] = cam_steps
     df.set_index("camera_step", inplace=True)
     export_dir = pathlib.Path("camera_prototype", "public", name)
-    pathlib.Path(export_dir).mkdir(parents=True)
+    pathlib.Path(export_dir).mkdir(parents=True, exist_ok=True)
     df.to_csv(pathlib.Path(export_dir, "points.csv"))
     print(df)
 
