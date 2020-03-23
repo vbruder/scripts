@@ -1,0 +1,25 @@
+/mnt/share/Daten/Partikel/mheinen/Phasenzerfall/simVL/run05/megamol_0000030000.mmpld
+phase change
+Bounding box: (0.000000, 0.000000, 0.000000) - (325.487000, 325.487000, 325.487000)
+Clipping box: (0.000000, 0.000000, 0.000000) - (325.487000, 325.487000, 325.487000)
+
+/mnt/share/Daten/Partikel/mheinen/oc_sim42.mmpld
+droplet
+Bounding box: (0.000000, 0.000000, 0.000000) - (399.992004, 372.941986, 200.000000)
+Clipping box: (-0.500000, -0.500000, -0.500000) - (400.492004, 373.441986, 200.500000)
+
+/mnt/share/Projekte/SFB\ 716/D3/Data/B5.vid1.mmpld
+laser ablation
+Bounding box: (-2.000000, -2.000000, -2.000000) - (1069.680054, 1010.000000, 1010.000000)
+Clipping box: (-19857.136719, -2.007123, -2.021004) - (1069.680054, 1010.016418, 1010.018311)
+
+/mnt/share/Projekte/SFB\ 716/D3/Data/a8-kronenburg/megaridis-experimental.mmpld
+test
+Bounding box: (0.000000, 0.000000, 0.000000) - (100.000000, 100.000000, 100.000000)
+Clipping box: (-0.500000, -0.500000, -0.500000) - (100.500000, 100.500000, 100.500000)
+
+/mnt/share/Projekte/SFB\ 716/D3/Data/exp2mill_signed_distance_00030.mmpld
+liquid formation
+Bounding box: (0.000000, 0.000000, 0.000000) - (124.000000, 1364.000000, 124.000000)
+Clipping box: (-0.500000, -0.499000, -0.500000) - (124.459999, 1364.055054, 124.459999)
+

@@ -209,7 +209,7 @@ def pathpatch_translate(pathpatch, delta):
     pathpatch._segment3d += delta
 
 
-def plot_plane(ax, point, normal, size=10, color='y'):    
+def plot_plane(ax, point, normal, size=15, color='y'):    
     p = Circle((0, 0), size, facecolor = color, alpha = .2)
     ax.add_patch(p)
     pathpatch_2d_to_3d(p, z=0, normal=normal)
@@ -266,7 +266,7 @@ def project_2d(coords, normal, rays):
     plt.quiver(coords_trans_x, coords_trans_y, rays_trans_x, rays_trans_y, color=[0,0.7,0,0.4])
     plt.show()
 
-    return coords_trans, rays_trans
+    return coords_trans, rays_trans, X, Y
 
 '''
 draw unit cube 
@@ -277,6 +277,41 @@ def draw_cube(ax):
     for s, e in combinations(np.array(list(product(r,r,r))), 2):
         if np.sum(np.abs(s-e)) == r[1]-r[0]:
             ax.plot3D(*zip(s, e), color="red")
+
+'''
+@see https://stackoverflow.com/questions/47617952/drawing-a-righthand-coordinate-system-in-mplot3d
+'''
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
+class Arrow3D(FancyArrowPatch):
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
+
+    def draw(self, renderer):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+        self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
+        FancyArrowPatch.draw(self, renderer)
+
+
+# plot projection of 3D coordinate system
+def plot_coord_system(ax, X, Y, Z):
+    # plot coordinate system
+    arrow_prop_dict = dict(mutation_scale=20, arrowstyle='->',shrinkA=0, shrinkB=0)
+    a = Arrow3D([0,X[0]], [0,X[1]], [0,X[2]], **arrow_prop_dict, color='r')
+    ax.add_artist(a)
+    a = Arrow3D([0,Y[0]], [0,Y[1]], [0,Y[2]], **arrow_prop_dict, color='b')
+    ax.add_artist(a)
+    a = Arrow3D([0,Z[0]], [0,Z[1]], [0,Z[2]], **arrow_prop_dict, color='g')
+    ax.add_artist(a)
+
+    # ax.view_init(azim=-90, elev=90)
+    # ax.set_axis_off()
+
+    ax.text(X[0]+0.1, X[1], X[2], r'$X$')
+    ax.text(Y[0], Y[1]+0.1, Y[2], r'$Y$')
+    ax.text(Z[0], Z[1], Z[2]+0.1, r'$Z$')
 
 
 '''
@@ -340,11 +375,21 @@ def trrojan_paths(num_iterations):
         plot_plane(ax, point, normal, size=4) 
         # plot bounding box (unit cube)
         draw_cube(ax)
+        
+        # project points to 2d and plot in 2d
+        coords_trans, rays_trans, X, Y = project_2d(coords, normal, rays)
+        X = X / np.linalg.norm(X)
+        Y = Y / np.linalg.norm(Y)
+        normal = normal / np.linalg.norm(normal)
+
+        # plot coord system
+        fig2 = plt.figure()
+        ax1 = fig2.add_subplot(111, projection='3d')
+        plot_coord_system(ax1, X, Y, normal)
+
         plt.title(name)
         plt.show()
 
-        # project points to 2d and plot in 2d
-        coords_trans, rays_trans = project_2d(coords, normal, rays)
         write2csv(coords_trans, rays_trans, 11, 10, name)
 
 '''
@@ -464,11 +509,19 @@ def main():
     # plot bounding box (unit cube)
     draw_cube(ax)
 
+    # project points to 2d and plot in 2d
+    coords_trans, rays_trans, X, Y = project_2d(coords, normal, rays)
+    X = X / np.linalg.norm(X)
+    Y = Y / np.linalg.norm(Y)
+    normal = normal / np.linalg.norm(normal)
+
+    fig2 = plt.figure()
+    ax1 = fig2.add_subplot(111, projection='3d')
+    plot_coord_system(ax1, X, Y, normal)
+
     plt.title("Custom camera path")
     plt.show()
     
-    # project points to 2d and plot in 2d
-    coords_trans, rays_trans = project_2d(coords, normal, rays)
     write2csv(coords_trans, rays_trans, len(trans), stride, "custom")
 
 main()
